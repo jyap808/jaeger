@@ -18,7 +18,7 @@ const jaegerTemplateExtension = ".jgrt"
 const jaegerJSONGPGDBExtension = ".jgrdb"
 const jaegerQuote = "Stacker Pentecost: Haven't you heard Mr. Beckett? The world is coming to an end. So where would you rather die? Here? Or in a Jaeger!"
 
-var debug debugging = true // or flip to false
+var debug debugging = false // or flip to false
 
 type debugging bool
 
@@ -44,7 +44,7 @@ func decodeBase64EncryptedMessage(s string, keyring openpgp.KeyRing) string {
 	if err != nil {
 		log.Fatalln("ERR:", err)
 	}
-	fmt.Printf("keyring: #%v", keyring)
+	debug.Printf("keyring: #%v", keyring)
 	md, err := openpgp.ReadMessage(bytes.NewBuffer(dec), keyring, nil, nil)
 	if err != nil {
 		log.Fatalln("ERR: Error reading message - ", err)
@@ -58,7 +58,7 @@ func decodeBase64EncryptedMessage(s string, keyring openpgp.KeyRing) string {
 func main() {
 	// Define flags
 	var (
-		//debugFlag         = flag.Bool("d", false, "Enable Debug")
+		debugFlag         = flag.Bool("d", false, "Enable Debug")
 		inputTemplate     = flag.String("i", "", "Input Template file. eg. file.txt.jgrt")
 		jsonGPGDB         = flag.String("j", "", "JSON GPG database file. eg. file.txt.jgrdb")
 		outputFile        = flag.String("o", "", "Output file. eg. file.txt")
@@ -69,9 +69,9 @@ func main() {
 	// Any additional non-flag arguments can be retrieved with flag.Args() which returns a []string.
 	flag.Parse()
 
-	//if *debugFlag {
-	//	debug debugging = true
-	//}
+	if *debugFlag {
+		debug = true
+	}
 
 	if *inputTemplate == "" {
 		flag.Usage()
