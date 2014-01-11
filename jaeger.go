@@ -63,7 +63,7 @@ func processSecretKeyRing() (entity *openpgp.Entity, entitylist openpgp.EntityLi
 		log.Fatal(err)
 	}
 	secretKeyRing := fmt.Sprintf("%v/.gnupg/secring.gpg", usr.HomeDir)
-	fmt.Println(secretKeyRing)
+	debug.Printf("secretKeyRing file:", secretKeyRing)
 
 	secretKeyRingBuffer, err := os.Open(secretKeyRing)
 	if err != nil {
@@ -75,7 +75,22 @@ func processSecretKeyRing() (entity *openpgp.Entity, entitylist openpgp.EntityLi
 	}
 
 	entity = entitylist[0]
-	fmt.Println("Private key default keyring:", entity.Identities)
+	debug.Printf("Private key default keyring:", entity.Identities)
+
+	return entity, entitylist
+}
+
+func processArmoredKeyRingFile(keyringFile *string) (entity *openpgp.Entity, entitylist openpgp.EntityList) {
+	keyringFileBuffer, err := os.Open(*keyringFile)
+	if err != nil {
+		log.Fatalln("ERROR: Unable to read keyring file")
+	}
+	entitylist, err = openpgp.ReadArmoredKeyRing(keyringFileBuffer)
+	if err != nil {
+		log.Fatal(err)
+	}
+	entity = entitylist[0]
+	debug.Printf("Private key from armored string:", entity.Identities)
 
 	return entity, entitylist
 }
@@ -103,13 +118,6 @@ func main() {
 		log.Fatalf("\n\nError: No input file specified")
 		return
 	}
-
-	// TODO: Handle reading from default keyring
-	//if *keyringFile == "" {
-	//	flag.Usage()
-	//	log.Fatalf("\n\nError: No keyring file specified")
-	//	return
-	//}
 
 	basefilename := ""
 
@@ -154,51 +162,16 @@ func main() {
 	// Read armored private key or default keyring into type EntityList
 	// An EntityList contains one or more Entities.
 	// This assumes there is only one Entity involved
-	// TODO: Read default keyring
 	// TODO: Support to prompt for passphrase
 
-	//entity := new(openpgp.Entity)
 	var entity *openpgp.Entity
 	var entitylist openpgp.EntityList
 
 	if *keyringFile == "" {
 		entity, entitylist = processSecretKeyRing()
-		// Get default secret keyring location
-		//usr, err := user.Current()
-		//if err != nil {
-		//	log.Fatal(err)
-		//}
-		//secretKeyRing := fmt.Sprintf("%v/.gnupg/secring.gpg", usr.HomeDir)
-		//fmt.Println(secretKeyRing)
-
-		//secretKeyRingBuffer, err := os.Open(secretKeyRing)
-		//if err != nil {
-		//	panic(err)
-		//}
-		//entitylist, err = openpgp.ReadKeyRing(secretKeyRingBuffer)
-		//if err != nil {
-		//	log.Fatal(err)
-		//}
-
-		//entity = entitylist[0]
-		//fmt.Println("Private key default keyring:", entity.Identities)
-
 	} else {
-		keyringFileBuffer, err := os.Open(*keyringFile)
-		if err != nil {
-			log.Fatalln("ERROR: Unable to read keyring file")
-		}
-		entitylist, err = openpgp.ReadArmoredKeyRing(keyringFileBuffer)
-		if err != nil {
-			log.Fatal(err)
-		}
-		entity = entitylist[0]
-		debug.Printf("Private key from armored string:", entity.Identities)
-
+		entity, entitylist = processArmoredKeyRingFile(keyringFile)
 	}
-
-	//entity = entitylist[0]
-	debug.Printf("OUTSIDE: Private key from armored string:", entity.Identities)
 
 	// Decrypt private key using passphrase
 	passphrase := []byte(*passphraseKeyring)
@@ -224,7 +197,6 @@ func main() {
 		log.Fatalln("ERROR: Unable to read JSON GPG DB file")
 	}
 
-	//b := []byte(jsonStream2)
 	var j Data
 	if err := json.Unmarshal(jsonGPGDBBuffer, &j); err != nil {
 		panic(err)
