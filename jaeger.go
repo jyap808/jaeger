@@ -1,44 +1,64 @@
-// Stacker Pentecost: Haven't you heard Mr. Beckett? The world is coming to an end.
-// So where would you rather die? Here? Or in a Jaeger!
-
 package main
 
 import (
-	"flag"
-	"fmt"
-
 	"bytes"
 	"code.google.com/p/go.crypto/openpgp"
 	"encoding/base64"
+	"encoding/json"
+	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
+	"text/template"
 )
 
 const jaegerTemplateExtension = ".jgrt"
 const jaegerJSONGPGDBExtension = ".jgrdb"
+const jaegerQuote = "Stacker Pentecost: Haven't you heard Mr. Beckett? The world is coming to an end. So where would you rather die? Here? Or in a Jaeger!"
 
-func decryptBase64EncryptedMessage(s string, keyring openpgp.KeyRing) {
+var debug debugging = true // or flip to false
+
+type debugging bool
+
+func (d debugging) Printf(format string, args ...interface{}) {
+	// From: https://groups.google.com/forum/#!msg/golang-nuts/gU7oQGoCkmg/BNIl-TqB-4wJ
+	if d {
+		log.Printf(format, args...)
+	}
+}
+
+type Data struct {
+	Properties []Property
+}
+
+type Property struct {
+	Name           string //`json:"Name"`
+	EncryptedValue string //`json:"EncryptedValue"`
+}
+
+func decodeBase64EncryptedMessage(s string, keyring openpgp.KeyRing) string {
 	// Decrypt base64 encoded encrypted message using decrypted private key
 	dec, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
-		fmt.Println("error:", err)
-		return
+		log.Fatalln("ERR:", err)
 	}
-
-	md, err := openpgp.ReadMessage(bytes.NewBuffer(dec), keyring, nil /* no prompt */, nil)
+	fmt.Printf("keyring: #%v", keyring)
+	md, err := openpgp.ReadMessage(bytes.NewBuffer(dec), keyring, nil, nil)
 	if err != nil {
-		fmt.Println("error reading message", err)
+		log.Fatalln("ERR: Error reading message - ", err)
 	}
 
 	bytes, err := ioutil.ReadAll(md.UnverifiedBody)
-	fmt.Println("md:", string(bytes))
+	debug.Printf("md:", string(bytes))
+	return string(bytes)
 }
 
 func main() {
 	// Define flags
 	var (
+		//debugFlag         = flag.Bool("d", false, "Enable Debug")
 		inputTemplate     = flag.String("i", "", "Input Template file. eg. file.txt.jgrt")
 		jsonGPGDB         = flag.String("j", "", "JSON GPG database file. eg. file.txt.jgrdb")
 		outputFile        = flag.String("o", "", "Output file. eg. file.txt")
@@ -48,6 +68,10 @@ func main() {
 	// Parse
 	// Any additional non-flag arguments can be retrieved with flag.Args() which returns a []string.
 	flag.Parse()
+
+	//if *debugFlag {
+	//	debug debugging = true
+	//}
 
 	if *inputTemplate == "" {
 		flag.Usage()
@@ -96,11 +120,11 @@ func main() {
 		}
 	}
 
-	fmt.Println("basefilename:", basefilename)
-	fmt.Println("jsonGPGDB:", *jsonGPGDB)
-	fmt.Println("outputFile:", *outputFile)
-	fmt.Println("passphrase:", *passphraseKeyring)
-	fmt.Println(*jsonGPGDB, *outputFile, *keyringFile)
+	debug.Printf("basefilename:", basefilename)
+	debug.Printf("jsonGPGDB:", *jsonGPGDB)
+	debug.Printf("outputFile:", *outputFile)
+	debug.Printf("passphrase:", *passphraseKeyring)
+	debug.Printf("keyringFile:", *keyringFile)
 
 	// Read armored private key into type EntityList
 	// An EntityList contains one or more Entities.
@@ -117,12 +141,12 @@ func main() {
 		log.Fatal(err)
 	}
 	entity := entitylist[0]
-	fmt.Println("Private key from armored string:", entity.Identities)
+	debug.Printf("Private key from armored string:", entity.Identities)
 
 	// Decrypt private key using passphrase
 	passphrase := []byte(*passphraseKeyring)
 	if entity.PrivateKey != nil && entity.PrivateKey.Encrypted {
-		fmt.Println("Decrypting private key using passphrase")
+		debug.Printf("Decrypting private key using passphrase")
 		err := entity.PrivateKey.Decrypt(passphrase)
 		if err != nil {
 			log.Fatalln("ERROR: Failed to decrypt key")
@@ -135,6 +159,45 @@ func main() {
 				log.Fatalln("ERROR: Failed to decrypt subkey")
 			}
 		}
+	}
+
+	// json handling
+	jsonGPGDBBuffer, err := ioutil.ReadFile(*jsonGPGDB)
+	if err != nil {
+		log.Fatalln("ERROR: Unable to read JSON GPG DB file")
+	}
+
+	//b := []byte(jsonStream2)
+	var j Data
+	if err := json.Unmarshal(jsonGPGDBBuffer, &j); err != nil {
+		panic(err)
+	}
+	debug.Printf("json unmarshal:", j)
+
+	p := make(map[string]string)
+
+	for _, v := range j.Properties {
+		debug.Printf("Name: %#v, EncryptedValue: %#v\n", v.Name, v.EncryptedValue)
+		p[v.Name] = decodeBase64EncryptedMessage(v.EncryptedValue, entitylist)
+	}
+
+	debug.Printf("properties map:", p)
+
+	// Template parsing
+	t := template.Must(template.ParseFiles(*inputTemplate))
+
+	buf := new(bytes.Buffer)
+	t.Execute(buf, p) //merge template ‘t’ with content of ‘p’
+
+	bytes, _ := ioutil.ReadAll(buf)
+	debug.Printf(string(bytes))
+
+	// Writing file
+	// To handle large files, use a file buffer: http://stackoverflow.com/a/9739903/603745
+	if err := ioutil.WriteFile(*outputFile, bytes, 0644); err != nil {
+		panic(err)
+	} else {
+		fmt.Println("Wrote file:", *outputFile)
 	}
 
 }
