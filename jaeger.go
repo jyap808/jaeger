@@ -95,6 +95,27 @@ func processArmoredKeyRingFile(keyringFile *string) (entity *openpgp.Entity, ent
 	return entity, entitylist
 }
 
+func decryptPrivateKeyRing(passphraseKeyring *string, entity *openpgp.Entity) *openpgp.Entity {
+	// Decrypt private key using passphrase
+	passphrase := []byte(*passphraseKeyring)
+	if entity.PrivateKey != nil && entity.PrivateKey.Encrypted {
+		debug.Printf("Decrypting private key using passphrase")
+		err := entity.PrivateKey.Decrypt(passphrase)
+		if err != nil {
+			log.Fatalln("ERROR: Failed to decrypt key using passphrase")
+		}
+	}
+	for _, subkey := range entity.Subkeys {
+		if subkey.PrivateKey != nil && subkey.PrivateKey.Encrypted {
+			err := subkey.PrivateKey.Decrypt(passphrase)
+			if err != nil {
+				log.Fatalln("ERROR: Failed to decrypt subkey")
+			}
+		}
+	}
+	return entity
+}
+
 func main() {
 	// Define flags
 	var (
@@ -173,23 +194,7 @@ func main() {
 		entity, entitylist = processArmoredKeyRingFile(keyringFile)
 	}
 
-	// Decrypt private key using passphrase
-	passphrase := []byte(*passphraseKeyring)
-	if entity.PrivateKey != nil && entity.PrivateKey.Encrypted {
-		debug.Printf("Decrypting private key using passphrase")
-		err := entity.PrivateKey.Decrypt(passphrase)
-		if err != nil {
-			log.Fatalln("ERROR: Failed to decrypt key using passphrase")
-		}
-	}
-	for _, subkey := range entity.Subkeys {
-		if subkey.PrivateKey != nil && subkey.PrivateKey.Encrypted {
-			err := subkey.PrivateKey.Decrypt(passphrase)
-			if err != nil {
-				log.Fatalln("ERROR: Failed to decrypt subkey")
-			}
-		}
-	}
+	entity = decryptPrivateKeyRing(passphraseKeyring, entity)
 
 	// json handling
 	jsonGPGDBBuffer, err := ioutil.ReadFile(*jsonGPGDB)
