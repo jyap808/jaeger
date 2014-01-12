@@ -140,6 +140,25 @@ func parseJaegerDBFile(jsonGPGDB *string, entitylist openpgp.EntityList) map[str
 	return p
 }
 
+func writeOutputFile(inputTemplate *string, outputFile *string, p map[string]string) {
+	// Template parsing
+	t := template.Must(template.ParseFiles(*inputTemplate))
+
+	buf := new(bytes.Buffer)
+	t.Execute(buf, p) //merge template ‘t’ with content of ‘p’
+
+	bytes, _ := ioutil.ReadAll(buf)
+	debug.Printf(string(bytes))
+
+	// Writing file
+	// To handle large files, use a file buffer: http://stackoverflow.com/a/9739903/603745
+	if err := ioutil.WriteFile(*outputFile, bytes, 0644); err != nil {
+		panic(err)
+	} else {
+		fmt.Println("Wrote file:", *outputFile)
+	}
+}
+
 func main() {
 	// Define flags
 	var (
@@ -223,21 +242,6 @@ func main() {
 	p := make(map[string]string)
 	p = parseJaegerDBFile(jsonGPGDB, entitylist)
 
-	// Template parsing
-	t := template.Must(template.ParseFiles(*inputTemplate))
-
-	buf := new(bytes.Buffer)
-	t.Execute(buf, p) //merge template ‘t’ with content of ‘p’
-
-	bytes, _ := ioutil.ReadAll(buf)
-	debug.Printf(string(bytes))
-
-	// Writing file
-	// To handle large files, use a file buffer: http://stackoverflow.com/a/9739903/603745
-	if err := ioutil.WriteFile(*outputFile, bytes, 0644); err != nil {
-		panic(err)
-	} else {
-		fmt.Println("Wrote file:", *outputFile)
-	}
+	writeOutputFile(inputTemplate, outputFile, p)
 
 }
