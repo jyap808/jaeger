@@ -116,6 +116,30 @@ func decryptPrivateKeyRing(passphraseKeyring *string, entity *openpgp.Entity) *o
 	return entity
 }
 
+func parseJaegerDBFile(jsonGPGDB *string, entitylist openpgp.EntityList) map[string]string {
+	// json handling
+	jsonGPGDBBuffer, err := ioutil.ReadFile(*jsonGPGDB)
+	if err != nil {
+		log.Fatalln("ERROR: Unable to read JSON GPG DB file")
+	}
+
+	var j Data
+	if err := json.Unmarshal(jsonGPGDBBuffer, &j); err != nil {
+		panic(err)
+	}
+	debug.Printf("json unmarshal:", j)
+
+	p := make(map[string]string)
+
+	for _, v := range j.Properties {
+		debug.Printf("Name: %#v, EncryptedValue: %#v\n", v.Name, v.EncryptedValue)
+		p[v.Name] = decodeBase64EncryptedMessage(v.EncryptedValue, entitylist)
+	}
+
+	debug.Printf("properties map:", p)
+	return p
+}
+
 func main() {
 	// Define flags
 	var (
@@ -196,26 +220,8 @@ func main() {
 
 	entity = decryptPrivateKeyRing(passphraseKeyring, entity)
 
-	// json handling
-	jsonGPGDBBuffer, err := ioutil.ReadFile(*jsonGPGDB)
-	if err != nil {
-		log.Fatalln("ERROR: Unable to read JSON GPG DB file")
-	}
-
-	var j Data
-	if err := json.Unmarshal(jsonGPGDBBuffer, &j); err != nil {
-		panic(err)
-	}
-	debug.Printf("json unmarshal:", j)
-
 	p := make(map[string]string)
-
-	for _, v := range j.Properties {
-		debug.Printf("Name: %#v, EncryptedValue: %#v\n", v.Name, v.EncryptedValue)
-		p[v.Name] = decodeBase64EncryptedMessage(v.EncryptedValue, entitylist)
-	}
-
-	debug.Printf("properties map:", p)
+	p = parseJaegerDBFile(jsonGPGDB, entitylist)
 
 	// Template parsing
 	t := template.Must(template.ParseFiles(*inputTemplate))
