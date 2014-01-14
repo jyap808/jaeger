@@ -62,9 +62,17 @@ func processSecretKeyRing() (entity *openpgp.Entity, entitylist openpgp.EntityLi
 	if err != nil {
 		log.Fatal(err)
 	}
-	secretKeyRing := fmt.Sprintf("%v/.gnupg/secring.gpg", usr.HomeDir)
-	debug.Printf("secretKeyRing file:", secretKeyRing)
 
+	jaegerSecretKeyRing := fmt.Sprintf("%v/.gnupg/jaeger_secring.gpg", usr.HomeDir)
+	secretKeyRing := ""
+
+	if _, err := os.Stat(jaegerSecretKeyRing); err == nil {
+		secretKeyRing = jaegerSecretKeyRing
+	} else {
+		secretKeyRing = fmt.Sprintf("%v/.gnupg/secring.gpg", usr.HomeDir)
+	}
+
+	debug.Printf("secretKeyRing file:", secretKeyRing)
 	secretKeyRingBuffer, err := os.Open(secretKeyRing)
 	if err != nil {
 		panic(err)
