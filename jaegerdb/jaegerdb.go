@@ -10,11 +10,16 @@
 package main
 
 import (
+	"bytes"
+	"code.google.com/p/go.crypto/openpgp"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
+	"os/user"
 )
 
 const jaegerJSONGPGDBExtension = ".jgrdb"
@@ -43,10 +48,12 @@ type Property struct {
 func main() {
 	// Define flags
 	var (
+		addKey      = flag.String("a", "", "Add property")
 		debugFlag   = flag.Bool("d", false, "Enable Debug")
 		deleteKey   = flag.String("delete", "", "Delete property")
 		jsonGPGDB   = flag.String("j", "", "JSON GPG database file. eg. file.txt.jgrdb")
-		keyringFile = flag.String("k", "", "Keyring file. Secret key in armor format. eg. secret.asc")
+		keyringFile = flag.String("k", "", "Keyring file. Public key in armor format. eg. pubring.asc")
+		value       = flag.String("v", "", "Value for keys to use")
 	)
 	// Parse
 	// Any additional non-flag arguments can be retrieved with flag.Args() which returns a []string.
@@ -66,7 +73,97 @@ func main() {
 		deleteKeyJaegerDB(deleteKey, jsonGPGDB)
 	}
 
-	fmt.Println("Hello World!", *jsonGPGDB, *keyringFile)
+	var entity *openpgp.Entity
+	var entitylist openpgp.EntityList
+
+	if *keyringFile == "" {
+		entity, entitylist = processPublicKeyRing()
+	} else {
+		entity, entitylist = processArmoredKeyRingFile(keyringFile)
+	}
+
+	if *addKey != "" {
+		addKeyJaegerDB(addKey, value, jsonGPGDB)
+	}
+
+	fmt.Println("Hello World!", *jsonGPGDB, *keyringFile, entity, entitylist)
+}
+
+func encodeBase64EncryptedMessage(s string, keyring openpgp.KeyRing) string {
+	// Encrypt message using public key and then encode with base64
+	debug.Printf("keyring: #%v", keyring)
+	buf := new(bytes.Buffer)
+	w, err := openpgp.Encrypt(buf, keyring, nil, nil, nil)
+	if err != nil {
+		log.Fatalln("ERR: Error encrypting message - ", err)
+	}
+
+	_, err = w.Write([]byte(s))
+	if err != nil {
+	}
+	err = w.Close()
+	if err != nil {
+	}
+
+	// Output as base64 encoded string
+	bytes, err := ioutil.ReadAll(buf)
+	str := base64.StdEncoding.EncodeToString(bytes)
+
+	fmt.Println("Public key encrypted message (base64 encoded):", str)
+
+	return str
+}
+
+func processPublicKeyRing() (entity *openpgp.Entity, entitylist openpgp.EntityList) {
+	// TODO: Handle a specified recipient
+	// Get default public keyring location
+	usr, err := user.Current()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	jaegerPublicKeyRing := fmt.Sprintf("%v/.gnupg/jaeger_pubring.gpg", usr.HomeDir)
+	publicKeyRing := ""
+
+	if _, err := os.Stat(jaegerPublicKeyRing); err == nil {
+		publicKeyRing = jaegerPublicKeyRing
+	} else {
+		publicKeyRing = fmt.Sprintf("%v/.gnupg/pubring.gpg", usr.HomeDir)
+	}
+
+	debug.Printf("publicKeyRing file:", publicKeyRing)
+	publicKeyRingBuffer, err := os.Open(publicKeyRing)
+	if err != nil {
+		panic(err)
+	}
+	entitylist, err = openpgp.ReadKeyRing(publicKeyRingBuffer)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	entity = entitylist[0]
+	debug.Printf("Public key default keyring:", entity.Identities)
+
+	return entity, entitylist
+}
+
+func processArmoredKeyRingFile(keyringFile *string) (entity *openpgp.Entity, entitylist openpgp.EntityList) {
+	keyringFileBuffer, err := os.Open(*keyringFile)
+	if err != nil {
+		log.Fatalln("ERROR: Unable to read keyring file")
+	}
+	entitylist, err = openpgp.ReadArmoredKeyRing(keyringFileBuffer)
+	if err != nil {
+		log.Fatal(err)
+	}
+	entity = entitylist[0]
+	debug.Printf("Public key from armored string:", entity.Identities)
+
+	return entity, entitylist
+}
+
+func addKeyJaegerDB(key *string, value *string, jsonGPGDB *string) {
+	fmt.Println(key, value, jsonGPGDB)
 }
 
 func deleteKeyJaegerDB(key *string, jsonGPGDB *string) {
