@@ -110,7 +110,7 @@ func decryptPrivateKeyRing(passphraseKeyring *string, entity *openpgp.Entity) *o
 		debug.Printf("Decrypting private key using passphrase")
 		err := entity.PrivateKey.Decrypt(passphrase)
 		if err != nil {
-			log.Fatalln("ERROR: Failed to decrypt key using passphrase")
+			log.Fatalln("ERROR: Failed to decrypt key using passphrase. Make sure you specify a passphrase if required.")
 		}
 	}
 	for _, subkey := range entity.Subkeys {
@@ -188,7 +188,6 @@ func main() {
 	if *inputTemplate == "" {
 		flag.Usage()
 		log.Fatalf("\n\nError: No input file specified")
-		return
 	}
 
 	basefilename := ""

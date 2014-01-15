@@ -1,4 +1,8 @@
-// Open Jaeger DB file and Add/Delete/Change/View values
+// Manage Jaeger DB file values:
+// Delete - DONE
+// Add - DONE
+// Update/Change
+// View
 // Most important is Add and Change. These require public key handling
 // The other code exists
 // e.g.
@@ -6,6 +10,8 @@
 //
 // Read recipient from public key ring
 // ~/.gnupg/pubring.gpg
+
+// TODO: Initialize a blank JSON GPG DB file
 
 package main
 
@@ -83,17 +89,21 @@ func main() {
 	}
 
 	if *addKey != "" {
-		addKeyJaegerDB(addKey, value, jsonGPGDB)
+		if *value == "" {
+			flag.Usage()
+			log.Fatalf("\n\nError: No value for add key operation specified")
+		}
+		addKeyJaegerDB(addKey, value, jsonGPGDB, entitylist)
 	}
 
-	fmt.Println("Hello World!", *jsonGPGDB, *keyringFile, entity, entitylist)
+	debug.Printf("End - Delete this line", *jsonGPGDB, *keyringFile, entity, entitylist)
 }
 
-func encodeBase64EncryptedMessage(s string, keyring openpgp.KeyRing) string {
+func encodeBase64EncryptedMessage(s string, entitylist openpgp.EntityList) string {
 	// Encrypt message using public key and then encode with base64
-	debug.Printf("keyring: #%v", keyring)
+	debug.Printf("entitylist: #%v", entitylist)
 	buf := new(bytes.Buffer)
-	w, err := openpgp.Encrypt(buf, keyring, nil, nil, nil)
+	w, err := openpgp.Encrypt(buf, entitylist, nil, nil, nil)
 	if err != nil {
 		log.Fatalln("ERR: Error encrypting message - ", err)
 	}
@@ -109,7 +119,7 @@ func encodeBase64EncryptedMessage(s string, keyring openpgp.KeyRing) string {
 	bytes, err := ioutil.ReadAll(buf)
 	str := base64.StdEncoding.EncodeToString(bytes)
 
-	fmt.Println("Public key encrypted message (base64 encoded):", str)
+	debug.Printf("Public key encrypted message (base64 encoded): %v", str)
 
 	return str
 }
@@ -162,8 +172,43 @@ func processArmoredKeyRingFile(keyringFile *string) (entity *openpgp.Entity, ent
 	return entity, entitylist
 }
 
-func addKeyJaegerDB(key *string, value *string, jsonGPGDB *string) {
-	fmt.Println(key, value, jsonGPGDB)
+func addKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist openpgp.EntityList) {
+	// json handling
+	jsonGPGDBBuffer, err := ioutil.ReadFile(*jsonGPGDB)
+	if err != nil {
+		log.Fatalln("ERROR: Unable to read JSON GPG DB file")
+	}
+
+	var j Data
+	if err := json.Unmarshal(jsonGPGDBBuffer, &j); err != nil {
+		panic(err)
+	}
+	debug.Printf("json unmarshal: %v", j)
+
+	var newP []Property
+
+	p := Property{Name: *key, EncryptedValue: encodeBase64EncryptedMessage(*value, entitylist)}
+	newP = append(j.Properties, p)
+
+	debug.Printf("new properties: %v", newP)
+
+	newData := Data{newP}
+
+	bytes, err := json.MarshalIndent(newData, "", "    ")
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+
+	debug.Printf("b: %v", string(bytes))
+
+	// Writing file
+	// To handle large files, use a file buffer: http://stackoverflow.com/a/9739903/603745
+	if err := ioutil.WriteFile(*jsonGPGDB, bytes, 0644); err != nil {
+		panic(err)
+	} else {
+		log.Fatalln("Wrote file:", *jsonGPGDB)
+	}
+
 }
 
 func deleteKeyJaegerDB(key *string, jsonGPGDB *string) {
