@@ -1,7 +1,7 @@
 // Manage Jaeger DB file values:
 // Delete - DONE
 // Add - DONE
-// Update/Change
+// Update/Change - DONE
 // View
 // Most important is Add and Change. These require public key handling
 // The other code exists
@@ -55,6 +55,7 @@ func main() {
 	// Define flags
 	var (
 		addKey      = flag.String("a", "", "Add property")
+		changeKey   = flag.String("c", "", "Change property")
 		debugFlag   = flag.Bool("d", false, "Enable Debug")
 		deleteKey   = flag.String("delete", "", "Delete property")
 		jsonGPGDB   = flag.String("j", "", "JSON GPG database file. eg. file.txt.jgrdb")
@@ -94,6 +95,14 @@ func main() {
 			log.Fatalf("\n\nError: No value for add key operation specified")
 		}
 		addKeyJaegerDB(addKey, value, jsonGPGDB, entitylist)
+	}
+
+	if *changeKey != "" {
+		if *value == "" {
+			flag.Usage()
+			log.Fatalf("\n\nError: No value for change key operation specified")
+		}
+		changeKeyJaegerDB(changeKey, value, jsonGPGDB, entitylist)
 	}
 
 	debug.Printf("End - Delete this line", *jsonGPGDB, *keyringFile, entity, entitylist)
@@ -195,6 +204,55 @@ func addKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist op
 	newData := Data{newP}
 
 	bytes, err := json.MarshalIndent(newData, "", "    ")
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+
+	debug.Printf("b: %v", string(bytes))
+
+	// Writing file
+	// To handle large files, use a file buffer: http://stackoverflow.com/a/9739903/603745
+	if err := ioutil.WriteFile(*jsonGPGDB, bytes, 0644); err != nil {
+		panic(err)
+	} else {
+		log.Fatalln("Wrote file:", *jsonGPGDB)
+	}
+
+}
+func changeKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist openpgp.EntityList) {
+	// json handling
+	jsonGPGDBBuffer, err := ioutil.ReadFile(*jsonGPGDB)
+	if err != nil {
+		log.Fatalln("ERROR: Unable to read JSON GPG DB file")
+	}
+
+	var j Data
+	if err := json.Unmarshal(jsonGPGDBBuffer, &j); err != nil {
+		panic(err)
+	}
+	debug.Printf("json unmarshal: %v", j)
+
+	found := false
+
+	// New property to replace the old
+	p := Property{Name: *key, EncryptedValue: encodeBase64EncryptedMessage(*value, entitylist)}
+
+	// Search and replace
+	for i, _ := range j.Properties {
+		property := &j.Properties[i]
+		debug.Printf("i: %v, Name: %#v, EncryptedValue: %#v\n", i, property.Name, property.EncryptedValue)
+		if property.Name == *key {
+			j.Properties[i] = p
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		log.Fatalf("\n\nError: Property '%s' not found.", *key)
+	}
+
+	bytes, err := json.MarshalIndent(j, "", "    ")
 	if err != nil {
 		fmt.Println("error:", err)
 	}
