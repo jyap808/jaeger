@@ -54,13 +54,14 @@ type Property struct {
 func main() {
 	// Define flags
 	var (
-		addKey      = flag.String("a", "", "Add property")
-		changeKey   = flag.String("c", "", "Change property")
-		debugFlag   = flag.Bool("d", false, "Enable Debug")
-		deleteKey   = flag.String("delete", "", "Delete property")
-		jsonGPGDB   = flag.String("j", "", "JSON GPG database file. eg. file.txt.jgrdb")
-		keyringFile = flag.String("k", "", "Keyring file. Public key in armor format. eg. pubring.asc")
-		value       = flag.String("v", "", "Value for keys to use")
+		addKey       = flag.String("a", "", "Add property")
+		changeKey    = flag.String("c", "", "Change property")
+		debugFlag    = flag.Bool("d", false, "Enable Debug")
+		deleteKey    = flag.String("delete", "", "Delete property")
+		inializeFlag = flag.Bool("init", false, "Create an initial blank JSON GPG database file")
+		jsonGPGDB    = flag.String("j", "", "JSON GPG database file. eg. file.txt.jgrdb")
+		keyringFile  = flag.String("k", "", "Keyring file. Public key in armor format. eg. pubring.asc")
+		value        = flag.String("v", "", "Value for property to use")
 	)
 	// Parse
 	// Any additional non-flag arguments can be retrieved with flag.Args() which returns a []string.
@@ -74,6 +75,10 @@ func main() {
 		flag.Usage()
 		log.Fatalf("\n\nError: No JSON GPG database file specified")
 		return
+	}
+
+	if *inializeFlag {
+		initializeJSONGPGDB(jsonGPGDB)
 	}
 
 	if *deleteKey != "" {
@@ -106,6 +111,32 @@ func main() {
 	}
 
 	debug.Printf("End - Delete this line", *jsonGPGDB, *keyringFile, entity, entitylist)
+}
+
+func initializeJSONGPGDB(jsonGPGDB *string) {
+	if _, err := os.Stat(*jsonGPGDB); err == nil {
+		log.Fatalf("ERR: File already exists: %v", *jsonGPGDB)
+	}
+
+	var newP []Property
+
+	newData := Data{newP}
+
+	bytes, err := json.MarshalIndent(newData, "", "    ")
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+
+	debug.Printf("b: %v", string(bytes))
+
+	// Writing file
+	// To handle large files, use a file buffer: http://stackoverflow.com/a/9739903/603745
+	if err := ioutil.WriteFile(*jsonGPGDB, bytes, 0644); err != nil {
+		panic(err)
+	} else {
+		log.Fatalln("Wrote new file:", *jsonGPGDB)
+	}
+
 }
 
 func encodeBase64EncryptedMessage(s string, entitylist openpgp.EntityList) string {
@@ -219,6 +250,7 @@ func addKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist op
 	}
 
 }
+
 func changeKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist openpgp.EntityList) {
 	// json handling
 	jsonGPGDBBuffer, err := ioutil.ReadFile(*jsonGPGDB)
