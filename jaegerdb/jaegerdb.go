@@ -1,18 +1,3 @@
-// Manage Jaeger DB file values:
-// Delete - DONE
-// Add - DONE
-// Update/Change - DONE
-// View
-// Most important is Add and Change. These require public key handling
-// The other code exists
-// e.g.
-// echo -n "Test base64 GPG public key encrypted string" | gpg -er 7F98BBCE | base64
-//
-// Read recipient from public key ring
-// ~/.gnupg/pubring.gpg
-
-// TODO: Initialize a blank JSON GPG DB file
-
 package main
 
 import (
@@ -29,9 +14,11 @@ import (
 )
 
 const jaegerJSONGPGDBExtension = ".jgrdb"
-const jaegerQuote = "Stacker Pentecost: Haven't you heard Mr. Beckett? The world is coming to an end. So where would you rather die? Here? Or in a Jaeger!"
+const jaegerDBDescription = "JaegerDB - Jaeger database management program\n\nJaeger is a JSON encoded GPG encrypted key value store. It is useful for separating development with operations and keeping configuration files secure."
+const jaegerQuote = "\"Stacker Pentecost: Haven't you heard Mr. Beckett? The world is coming to an end. So where would you rather die? Here? Or in a Jaeger!\" - Pacific Rim"
+const jaegerDBRecommendedUsage = "RECOMMENDED:\n    jaegerdb -j file.txt.jgrdb -a \"Field1\" -v \"Secret value\"\n\nThis will run JaegerDB with the default options and assume the following:\n    Keyring file: ~/.gnupg/jaeger_pubring.gpg"
 
-var debug debugging = false // or flip to false
+var debug debugging = false
 
 type debugging bool
 
@@ -53,6 +40,7 @@ type Property struct {
 
 func main() {
 	// Define flags
+	// TODO: View individual property and unencrypted value. 'get'
 	var (
 		addKey       = flag.String("a", "", "Add property")
 		changeKey    = flag.String("c", "", "Change property")
@@ -63,8 +51,13 @@ func main() {
 		keyringFile  = flag.String("k", "", "Keyring file. Public key in armor format. eg. pubring.asc")
 		value        = flag.String("v", "", "Value for property to use")
 	)
-	// Parse
-	// Any additional non-flag arguments can be retrieved with flag.Args() which returns a []string.
+
+	flag.Usage = func() {
+		fmt.Printf("%s\n%s\n\n%s\n\n", jaegerDBDescription, jaegerQuote, jaegerDBRecommendedUsage)
+		fmt.Fprintf(os.Stderr, "OPTIONS:\n")
+		flag.PrintDefaults()
+	}
+
 	flag.Parse()
 
 	if *debugFlag {

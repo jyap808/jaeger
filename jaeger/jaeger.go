@@ -17,9 +17,11 @@ import (
 
 const jaegerTemplateExtension = ".jgrt"
 const jaegerDBExtension = ".jgrdb"
-const jaegerQuote = "Stacker Pentecost: Haven't you heard Mr. Beckett? The world is coming to an end. So where would you rather die? Here? Or in a Jaeger!"
+const jaegerDescription = "Jaeger - Template injection program\n\nJaeger is a JSON encoded GPG encrypted key value store. It is useful for separating development with operations and keeping configuration files secure."
+const jaegerQuote = "\"Stacker Pentecost: Haven't you heard Mr. Beckett? The world is coming to an end. So where would you rather die? Here? Or in a Jaeger!\" - Pacific Rim"
+const jaegerRecommendedUsage = "RECOMMENDED:\n    jaeger -i file.txt.jgrt\n\nThis will run Jaeger with the default options and assume the following:\n    JSON GPG database file: file.txt.jgrdb\n    Output file: file.txt\n    Keyring file: ~/.gnupg/jaeger_secring.gpg\n    No passphrase"
 
-var debug debugging = false // or flip to false
+var debug debugging = false
 
 type debugging bool
 
@@ -37,6 +39,96 @@ type Data struct {
 type Property struct {
 	Name           string //`json:"Name"`
 	EncryptedValue string //`json:"EncryptedValue"`
+}
+
+func main() {
+	// Define flags
+	var (
+		debugFlag         = flag.Bool("d", false, "Enable Debug")
+		inputTemplate     = flag.String("i", "", "Input Template file. eg. file.txt.jgrt")
+		jsonGPGDB         = flag.String("j", "", "JSON GPG database file. eg. file.txt.jgrdb")
+		outputFile        = flag.String("o", "", "Output file. eg. file.txt")
+		keyringFile       = flag.String("k", "", "Keyring file. Secret key in armor format. eg. secret.asc")
+		passphraseKeyring = flag.String("p", "", "Passphrase for keyring. If this is not set the passphrase will be blank or read from the environment variable PASSPHRASE.")
+	)
+
+	flag.Usage = func() {
+		fmt.Printf("%s\n%s\n\n%s\n\n", jaegerDescription, jaegerQuote, jaegerRecommendedUsage)
+		fmt.Fprintf(os.Stderr, "OPTIONS:\n")
+		flag.PrintDefaults()
+	}
+
+	flag.Parse()
+
+	if *debugFlag {
+		debug = true
+	}
+
+	if *inputTemplate == "" {
+		flag.Usage()
+		log.Fatalf("\n\nError: No input template file specified")
+	}
+
+	basefilename := ""
+
+	if strings.HasSuffix(*inputTemplate, jaegerTemplateExtension) {
+		basefilename = strings.TrimSuffix(*inputTemplate, jaegerTemplateExtension)
+	}
+
+	if *jsonGPGDB == "" {
+		if basefilename == "" {
+			flag.Usage()
+			log.Fatalf("\n\nERROR: No JSON GPG DB file specified or input file does not have a %v extension", jaegerTemplateExtension)
+			return
+		}
+		// Set from the basefilename
+		*jsonGPGDB = fmt.Sprintf("%v%v", basefilename, jaegerDBExtension)
+	}
+
+	if *outputFile == "" {
+		if basefilename == "" {
+			flag.Usage()
+			log.Fatalf("\n\nERROR: No Output file specified or input file does not have a %v extension", jaegerTemplateExtension)
+			return
+		}
+		// Set from the basefilename
+		*outputFile = basefilename
+	}
+
+	if *passphraseKeyring == "" {
+		passphrase := os.Getenv("PASSPHRASE")
+		if len(passphrase) != 0 {
+			*passphraseKeyring = passphrase
+		}
+	}
+
+	debug.Printf("basefilename:", basefilename)
+	debug.Printf("jsonGPGDB:", *jsonGPGDB)
+	debug.Printf("outputFile:", *outputFile)
+	debug.Printf("passphrase:", *passphraseKeyring)
+	debug.Printf("keyringFile:", *keyringFile)
+
+	// Read armored private key or default keyring into type EntityList
+	// An EntityList contains one or more Entities.
+	// This assumes there is only one Entity involved
+	// TODO: Support to prompt for passphrase
+
+	var entity *openpgp.Entity
+	var entitylist openpgp.EntityList
+
+	if *keyringFile == "" {
+		entity, entitylist = processSecretKeyRing()
+	} else {
+		entity, entitylist = processArmoredKeyRingFile(keyringFile)
+	}
+
+	entity = decryptPrivateKeyRing(passphraseKeyring, entity)
+
+	p := make(map[string]string)
+	p = parseJaegerDBFile(jsonGPGDB, entitylist)
+
+	writeOutputFile(inputTemplate, outputFile, p)
+
 }
 
 func decodeBase64EncryptedMessage(s string, keyring openpgp.KeyRing) string {
@@ -165,90 +257,4 @@ func writeOutputFile(inputTemplate *string, outputFile *string, p map[string]str
 	} else {
 		fmt.Println("Wrote file:", *outputFile)
 	}
-}
-
-func main() {
-	// Define flags
-	var (
-		debugFlag         = flag.Bool("d", false, "Enable Debug")
-		inputTemplate     = flag.String("i", "", "Input Template file. eg. file.txt.jgrt")
-		jsonGPGDB         = flag.String("j", "", "JSON GPG database file. eg. file.txt.jgrdb")
-		outputFile        = flag.String("o", "", "Output file. eg. file.txt")
-		keyringFile       = flag.String("k", "", "Keyring file. Secret key in armor format. eg. secret.asc")
-		passphraseKeyring = flag.String("p", "", "Passphrase for keyring. If this is not set the passphrase will be blank of read from the environment variable PASSPHRASE.")
-	)
-	// Parse
-	// Any additional non-flag arguments can be retrieved with flag.Args() which returns a []string.
-	flag.Parse()
-
-	if *debugFlag {
-		debug = true
-	}
-
-	if *inputTemplate == "" {
-		flag.Usage()
-		log.Fatalf("\n\nError: No input file specified")
-	}
-
-	basefilename := ""
-
-	if strings.HasSuffix(*inputTemplate, jaegerTemplateExtension) {
-		basefilename = strings.TrimSuffix(*inputTemplate, jaegerTemplateExtension)
-	}
-
-	if *jsonGPGDB == "" {
-		if basefilename == "" {
-			flag.Usage()
-			log.Fatalf("\n\nERROR: No JSON GPG DB file specified or input file does not have a %v extension", jaegerTemplateExtension)
-			return
-		}
-		// Set from the basefilename
-		*jsonGPGDB = fmt.Sprintf("%v%v", basefilename, jaegerDBExtension)
-	}
-
-	if *outputFile == "" {
-		if basefilename == "" {
-			flag.Usage()
-			log.Fatalf("\n\nERROR: No Output file specified or input file does not have a %v extension", jaegerTemplateExtension)
-			return
-		}
-		// Set from the basefilename
-		*outputFile = basefilename
-
-	}
-
-	if *passphraseKeyring == "" {
-		passphrase := os.Getenv("PASSPHRASE")
-		if len(passphrase) != 0 {
-			*passphraseKeyring = passphrase
-		}
-	}
-
-	debug.Printf("basefilename:", basefilename)
-	debug.Printf("jsonGPGDB:", *jsonGPGDB)
-	debug.Printf("outputFile:", *outputFile)
-	debug.Printf("passphrase:", *passphraseKeyring)
-	debug.Printf("keyringFile:", *keyringFile)
-
-	// Read armored private key or default keyring into type EntityList
-	// An EntityList contains one or more Entities.
-	// This assumes there is only one Entity involved
-	// TODO: Support to prompt for passphrase
-
-	var entity *openpgp.Entity
-	var entitylist openpgp.EntityList
-
-	if *keyringFile == "" {
-		entity, entitylist = processSecretKeyRing()
-	} else {
-		entity, entitylist = processArmoredKeyRingFile(keyringFile)
-	}
-
-	entity = decryptPrivateKeyRing(passphraseKeyring, entity)
-
-	p := make(map[string]string)
-	p = parseJaegerDBFile(jsonGPGDB, entitylist)
-
-	writeOutputFile(inputTemplate, outputFile, p)
-
 }
