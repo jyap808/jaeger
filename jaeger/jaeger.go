@@ -48,7 +48,7 @@ func main() {
 		inputTemplate     = flag.String("i", "", "Input Template file. eg. file.txt.jgrt")
 		jsonGPGDB         = flag.String("j", "", "JSON GPG database file. eg. file.txt.jgrdb")
 		outputFile        = flag.String("o", "", "Output file. eg. file.txt")
-		keyringFile       = flag.String("k", "", "Keyring file. Secret key in armor format. eg. secret.asc")
+		keyringFile       = flag.String("k", "", "Keyring file. Secret key in ASCII armored format. eg. secret.asc")
 		passphraseKeyring = flag.String("p", "", "Passphrase for keyring. If this is not set the passphrase will be blank or read from the environment variable PASSPHRASE.")
 	)
 

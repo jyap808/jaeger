@@ -48,7 +48,7 @@ func main() {
 		deleteKey    = flag.String("delete", "", "Delete property")
 		inializeFlag = flag.Bool("init", false, "Create an initial blank JSON GPG database file")
 		jsonGPGDB    = flag.String("j", "", "JSON GPG database file. eg. file.txt.jgrdb")
-		keyringFile  = flag.String("k", "", "Keyring file. Public key in armor format. eg. pubring.asc")
+		keyringFile  = flag.String("k", "", "Keyring file. Public key in ASCII armored format. eg. pubring.asc")
 		value        = flag.String("v", "", "Value for property to use")
 	)
 
@@ -200,12 +200,13 @@ func processArmoredKeyRingFile(keyringFile *string) (entity *openpgp.Entity, ent
 		log.Fatal(err)
 	}
 	entity = entitylist[0]
-	debug.Printf("Public key from armored string:", entity.Identities)
+	debug.Printf("Public key from ASCII armored string:", entity.Identities)
 
 	return entity, entitylist
 }
 
 func addKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist openpgp.EntityList) {
+	// TODO: Check property doesn't already exist
 	// json handling
 	jsonGPGDBBuffer, err := ioutil.ReadFile(*jsonGPGDB)
 	if err != nil {
