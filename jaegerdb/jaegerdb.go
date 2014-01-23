@@ -206,7 +206,6 @@ func processArmoredKeyRingFile(keyringFile *string) (entity *openpgp.Entity, ent
 }
 
 func addKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist openpgp.EntityList) {
-	// TODO: Check property doesn't already exist
 	// json handling
 	jsonGPGDBBuffer, err := ioutil.ReadFile(*jsonGPGDB)
 	if err != nil {
@@ -219,9 +218,27 @@ func addKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist op
 	}
 	debug.Printf("json unmarshal: %v", j)
 
+	found := false
+
 	var newP []Property
 
 	p := Property{Name: *key, EncryptedValue: encodeBase64EncryptedMessage(*value, entitylist)}
+
+	// Search
+	for i, _ := range j.Properties {
+		property := &j.Properties[i]
+		debug.Printf("i: %v, Name: %#v, EncryptedValue: %#v\n", i, property.Name, property.EncryptedValue)
+		if property.Name == *key {
+			j.Properties[i] = p
+			found = true
+			break
+		}
+	}
+
+	if found {
+		log.Fatalf("\n\nError: Property '%s' already exists.", *key)
+	}
+
 	newP = append(j.Properties, p)
 
 	debug.Printf("new properties: %v", newP)
