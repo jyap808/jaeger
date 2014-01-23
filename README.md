@@ -31,7 +31,7 @@ Install Jaeger:
     go get github.com/jyap808/jaeger/jaeger
     go get github.com/jyap808/jaeger/jaegerdb
 
-This will create the binaries `jaeger` and `jaegerdb` in your $GITPATH/bin directory.
+This will create the binaries `jaeger` and `jaegerdb` in your $GOPATH/bin directory.
 
 ### Make standalone public and private GPG keys
 
