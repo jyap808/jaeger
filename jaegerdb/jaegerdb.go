@@ -71,11 +71,21 @@ func main() {
 	}
 
 	if *inializeFlag {
-		initializeJSONGPGDB(jsonGPGDB)
+		err := initializeJSONGPGDB(jsonGPGDB)
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			log.Fatalln("Initialized JSON GPG database and wrote to file:", *jsonGPGDB)
+		}
 	}
 
 	if *deleteKey != "" {
-		deleteKeyJaegerDB(deleteKey, jsonGPGDB)
+		err := deleteKeyJaegerDB(deleteKey, jsonGPGDB)
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			log.Fatalln("Deleted property and wrote to file:", *jsonGPGDB)
+		}
 	}
 
 	var entitylist openpgp.EntityList
@@ -91,7 +101,12 @@ func main() {
 			flag.Usage()
 			log.Fatalf("\n\nError: No value for add key operation specified")
 		}
-		addKeyJaegerDB(addKey, value, jsonGPGDB, entitylist)
+		err := addKeyJaegerDB(addKey, value, jsonGPGDB, entitylist)
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			log.Fatalln("Added property and wrote to file:", *jsonGPGDB)
+		}
 	}
 
 	if *changeKey != "" {
@@ -99,7 +114,12 @@ func main() {
 			flag.Usage()
 			log.Fatalf("\n\nError: No value for change key operation specified")
 		}
-		changeKeyJaegerDB(changeKey, value, jsonGPGDB, entitylist)
+		err := changeKeyJaegerDB(changeKey, value, jsonGPGDB, entitylist)
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			log.Fatalln("Changed property and wrote to file:", *jsonGPGDB)
+		}
 	}
 
 	if *deleteKey == "" && *addKey == "" && *changeKey == "" {
@@ -108,9 +128,9 @@ func main() {
 
 }
 
-func initializeJSONGPGDB(jsonGPGDB *string) {
+func initializeJSONGPGDB(jsonGPGDB *string) error {
 	if _, err := os.Stat(*jsonGPGDB); err == nil {
-		log.Fatalf("ERR: File already exists: %v", *jsonGPGDB)
+		return fmt.Errorf("ERR: File already exists: %v", *jsonGPGDB)
 	}
 
 	var newP []Property
@@ -119,7 +139,7 @@ func initializeJSONGPGDB(jsonGPGDB *string) {
 
 	bytes, err := json.MarshalIndent(newData, "", "    ")
 	if err != nil {
-		fmt.Println("error:", err)
+		return fmt.Errorf("error:", err)
 	}
 
 	debug.Printf("b: %v", string(bytes))
@@ -127,11 +147,10 @@ func initializeJSONGPGDB(jsonGPGDB *string) {
 	// Writing file
 	// To handle large files, use a file buffer: http://stackoverflow.com/a/9739903/603745
 	if err := ioutil.WriteFile(*jsonGPGDB, bytes, 0644); err != nil {
-		panic(err)
-	} else {
-		log.Fatalln("Wrote new file:", *jsonGPGDB)
+		return fmt.Errorf("error:", err)
 	}
 
+	return nil
 }
 
 func encodeBase64EncryptedMessage(s string, entitylist openpgp.EntityList) string {
@@ -207,16 +226,16 @@ func processArmoredKeyRingFile(keyringFile *string) (entity *openpgp.Entity, ent
 	return entity, entitylist
 }
 
-func addKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist openpgp.EntityList) {
+func addKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist openpgp.EntityList) error {
 	// json handling
 	jsonGPGDBBuffer, err := ioutil.ReadFile(*jsonGPGDB)
 	if err != nil {
-		log.Fatalln("ERROR: Unable to read JSON GPG DB file")
+		return fmt.Errorf("ERROR: Unable to read JSON GPG DB file")
 	}
 
 	var j Data
 	if err := json.Unmarshal(jsonGPGDBBuffer, &j); err != nil {
-		panic(err)
+		return fmt.Errorf("error:", err)
 	}
 	debug.Printf("json unmarshal: %v", j)
 
@@ -238,7 +257,7 @@ func addKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist op
 	}
 
 	if found {
-		log.Fatalf("\n\nError: Property '%s' already exists.", *key)
+		return fmt.Errorf("\n\nError: Property '%s' already exists.", *key)
 	}
 
 	newP = append(j.Properties, p)
@@ -249,7 +268,7 @@ func addKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist op
 
 	bytes, err := json.MarshalIndent(newData, "", "    ")
 	if err != nil {
-		fmt.Println("error:", err)
+		return fmt.Errorf("error:", err)
 	}
 
 	debug.Printf("b: %v", string(bytes))
@@ -257,23 +276,22 @@ func addKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist op
 	// Writing file
 	// To handle large files, use a file buffer: http://stackoverflow.com/a/9739903/603745
 	if err := ioutil.WriteFile(*jsonGPGDB, bytes, 0644); err != nil {
-		panic(err)
-	} else {
-		log.Fatalln("Wrote file:", *jsonGPGDB)
+		return fmt.Errorf("error:", err)
 	}
 
+	return nil
 }
 
-func changeKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist openpgp.EntityList) {
+func changeKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist openpgp.EntityList) error {
 	// json handling
 	jsonGPGDBBuffer, err := ioutil.ReadFile(*jsonGPGDB)
 	if err != nil {
-		log.Fatalln("ERROR: Unable to read JSON GPG DB file")
+		return fmt.Errorf("ERROR: Unable to read JSON GPG DB file")
 	}
 
 	var j Data
 	if err := json.Unmarshal(jsonGPGDBBuffer, &j); err != nil {
-		panic(err)
+		return fmt.Errorf("error:", err)
 	}
 	debug.Printf("json unmarshal: %v", j)
 
@@ -294,12 +312,12 @@ func changeKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist
 	}
 
 	if !found {
-		log.Fatalf("\n\nError: Property '%s' not found.", *key)
+		return fmt.Errorf("\n\nError: Property '%s' not found.", *key)
 	}
 
 	bytes, err := json.MarshalIndent(j, "", "    ")
 	if err != nil {
-		fmt.Println("error:", err)
+		return fmt.Errorf("error:", err)
 	}
 
 	debug.Printf("b: %v", string(bytes))
@@ -307,25 +325,24 @@ func changeKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist
 	// Writing file
 	// To handle large files, use a file buffer: http://stackoverflow.com/a/9739903/603745
 	if err := ioutil.WriteFile(*jsonGPGDB, bytes, 0644); err != nil {
-		panic(err)
-	} else {
-		log.Fatalln("Wrote file:", *jsonGPGDB)
+		return fmt.Errorf("error:", err)
 	}
 
+	return nil
 }
 
-func deleteKeyJaegerDB(key *string, jsonGPGDB *string) {
+func deleteKeyJaegerDB(key *string, jsonGPGDB *string) error {
 	debug.Printf("deleteKeyJaegerDB key: %v", *key)
 
 	// json handling
 	jsonGPGDBBuffer, err := ioutil.ReadFile(*jsonGPGDB)
 	if err != nil {
-		log.Fatalln("ERROR: Unable to read JSON GPG DB file")
+		return fmt.Errorf("ERROR: Unable to read JSON GPG DB file")
 	}
 
 	var j Data
 	if err := json.Unmarshal(jsonGPGDBBuffer, &j); err != nil {
-		panic(err)
+		return fmt.Errorf("error:", err)
 	}
 	debug.Printf("json unmarshal: %v", j)
 
@@ -344,7 +361,7 @@ func deleteKeyJaegerDB(key *string, jsonGPGDB *string) {
 	}
 
 	if !found {
-		log.Fatalf("\n\nError: Property '%s' not found.", *key)
+		return fmt.Errorf("\n\nError: Property '%s' not found.", *key)
 	}
 
 	debug.Printf("new properties: %v", newP)
@@ -353,7 +370,7 @@ func deleteKeyJaegerDB(key *string, jsonGPGDB *string) {
 
 	bytes, err := json.MarshalIndent(newData, "", "    ")
 	if err != nil {
-		fmt.Println("error:", err)
+		return fmt.Errorf("error:", err)
 	}
 
 	debug.Printf("b: %v", string(bytes))
@@ -361,9 +378,8 @@ func deleteKeyJaegerDB(key *string, jsonGPGDB *string) {
 	// Writing file
 	// To handle large files, use a file buffer: http://stackoverflow.com/a/9739903/603745
 	if err := ioutil.WriteFile(*jsonGPGDB, bytes, 0644); err != nil {
-		panic(err)
-	} else {
-		log.Fatalln("Wrote file:", *jsonGPGDB)
+		return fmt.Errorf("error:", err)
 	}
 
+	return nil
 }
