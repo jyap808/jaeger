@@ -78,13 +78,12 @@ func main() {
 		deleteKeyJaegerDB(deleteKey, jsonGPGDB)
 	}
 
-	var entity *openpgp.Entity
 	var entitylist openpgp.EntityList
 
 	if *keyringFile == "" {
-		entity, entitylist = processPublicKeyRing()
+		_, entitylist = processPublicKeyRing()
 	} else {
-		entity, entitylist = processArmoredKeyRingFile(keyringFile)
+		_, entitylist = processArmoredKeyRingFile(keyringFile)
 	}
 
 	if *addKey != "" {
@@ -103,7 +102,10 @@ func main() {
 		changeKeyJaegerDB(changeKey, value, jsonGPGDB, entitylist)
 	}
 
-	debug.Printf("End - Delete this line", *jsonGPGDB, *keyringFile, entity, entitylist)
+	if *deleteKey == "" && *addKey == "" && *changeKey == "" {
+		log.Fatalf("\n\nError: No JSON GPG database operations specified")
+	}
+
 }
 
 func initializeJSONGPGDB(jsonGPGDB *string) {
