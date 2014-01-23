@@ -109,7 +109,7 @@ Take a look at the generated file.  Note that the decrypted values have now been
 
 ### Change a property value
 
-    jaegerdb -j test.txt.jgrdb -c DatabasePassword -p "This is the NEW database password"
+    jaegerdb -j test.txt.jgrdb -c DatabasePassword -v "This is the NEW database password"
 
 ### Regenerate the file
 
