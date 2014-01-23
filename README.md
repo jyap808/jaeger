@@ -2,11 +2,9 @@
 
 Jaeger is a JSON encoded GPG encrypted key value store. It is useful for separating development with operations and keeping configuration files secure.
 
-Jaeger is useful for deployment environments which have configuration files with sensitive data.
-
 PaaS providers assume configuration settings should be stored as environment variables.  There is nothing inherently wrong with this but it does assume your code base and application is set up to support reading settings from environment variables.
 
-Jaeger simplifies this by providing a system for storing, managing and generating configuration files that applications currently use.
+Jaeger simplifies this by providing a system for storing, managing and generating configuration files that applications commonly use.
 
 A basic set of files consists of the following.
 
@@ -89,13 +87,13 @@ Create test.txt.jgrt with contents:
 
 Jaeger can also read public and private keys in ASCII armored format via command line flags.
 
-    ./jaegerdb -init -j test.txt.jgrdb
+    jaegerdb -init -j test.txt.jgrdb
 
 ### Add some properties and values
 
-    ./jaegerdb -j test.txt.jgrdb -a DatabasePassword -v "This is the database password"
+    jaegerdb -j test.txt.jgrdb -a DatabasePassword -v "This is the database password"
 
-    ./jaegerdb -j test.txt.jgrdb -a Field2 -v "This is field 2"
+    jaegerdb -j test.txt.jgrdb -a Field2 -v "This is field 2"
 
 Take a look at the database file.  Note that the values are encrypted:
 
@@ -103,7 +101,7 @@ Take a look at the database file.  Note that the values are encrypted:
 
 ### Generate a file
 
-    ./jaeger -i test.txt.jgrt -p "test passphrase"
+    jaeger -i test.txt.jgrt -p "test passphrase"
 
 Take a look at the generated file.  Note that the decrypted values have now been injected:
 
@@ -111,11 +109,11 @@ Take a look at the generated file.  Note that the decrypted values have now been
 
 ### Change a property value
 
-    ./jaegerdb -j test.txt.jgrdb -c DatabasePassword -p "This is the NEW database password"
+    jaegerdb -j test.txt.jgrdb -c DatabasePassword -p "This is the NEW database password"
 
 ### Regenerate the file
 
-    ./jaeger -i test.txt.jgrt -p "test passphrase"
+    jaeger -i test.txt.jgrt -p "test passphrase"
 
 Take a look at the newly generated file.  Note that the generated file now has the new property value:
 
