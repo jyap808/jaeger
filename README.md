@@ -1,6 +1,6 @@
 ## Jaeger
 
-Jaeger is a JSON encoded GPG encrypted key value store. It is useful for separating development with operations and keeping configuration files secure.
+Jaeger is a JSON encoded GPG encrypted key value store. It is useful for generating and keeping configuration files secure. Jaeger is written in Go.
 
 PaaS providers assume configuration settings should be stored as environment variables.  There is nothing inherently wrong with this but it does assume your code base and application is set up to support reading settings from environment variables.
 
