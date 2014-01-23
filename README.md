@@ -31,11 +31,11 @@ Install Jaeger:
     go get github.com/jyap808/jaeger/jaeger
     go get github.com/jyap808/jaeger/jaegerdb
 
-This will create the binaries `jaeger` and `jaegerdb` in your $GOPATH/bin directory.
+This will create the binaries `jaeger` and `jaegerdb` in your `$GOPATH/bin` directory.
 
 ### Make standalone public and private GPG keys
 
-Jaeger can also read public and private keys in ASCII armored format via command line flags.
+Jaeger can also read public and private keys in ASCII armored format via command line flags.  Here we are creating standalone GPG keys that Jaeger will use by default.
 
     gpg --keyring ~/.gnupg/jaeger_pubring.gpg --secret-keyring ~/.gnupg/jaeger_secring.gpg --gen-key --no-default-keyring
 
@@ -76,7 +76,7 @@ Public key:
 
 ### Create a test Template file
 
-Create test.txt.jgrt with contents:
+Create `test.txt.jgrt` with contents:
 
     datebase.username = dbuser
     database.password = {{.DatabasePassword}}
