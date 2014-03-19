@@ -75,7 +75,8 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		} else {
-			log.Fatalln("Initialized JSON GPG database and wrote to file:", *jsonGPGDB)
+			fmt.Println("Initialized JSON GPG database and wrote to file:", *jsonGPGDB)
+			os.Exit(0)
 		}
 	}
 
@@ -84,7 +85,8 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		} else {
-			log.Fatalln("Deleted property and wrote to file:", *jsonGPGDB)
+			fmt.Println("Deleted property and wrote to file:", *jsonGPGDB)
+			os.Exit(0)
 		}
 	}
 
@@ -105,7 +107,8 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		} else {
-			log.Fatalln("Added property and wrote to file:", *jsonGPGDB)
+			fmt.Println("Added property and wrote to file:", *jsonGPGDB)
+			os.Exit(0)
 		}
 	}
 
@@ -118,7 +121,8 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		} else {
-			log.Fatalln("Changed property and wrote to file:", *jsonGPGDB)
+			fmt.Println("Changed property and wrote to file:", *jsonGPGDB)
+			os.Exit(0)
 		}
 	}
 
