@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"os/user"
+	"path/filepath"
 )
 
 const jaegerJSONGPGDBExtension = ".jgrdb"
@@ -65,9 +66,13 @@ func main() {
 	}
 
 	if *jsonGPGDB == "" {
-		flag.Usage()
-		log.Fatalf("\n\nError: No JSON GPG database file specified")
-		return
+		assumedJaegerDB, err := checkExistsJaegerDB()
+		if err != nil {
+			flag.Usage()
+			log.Fatalf("\n\nError: %s", err)
+			return
+		}
+		*jsonGPGDB = assumedJaegerDB
 	}
 
 	if *initializeFlag {
@@ -130,6 +135,19 @@ func main() {
 		log.Fatalf("\n\nError: No JSON GPG database operations specified")
 	}
 
+}
+
+func checkExistsJaegerDB() (string, error) {
+	// If no JSON GPG database file is explicitly specified, check that one JSON GPG database file is in the
+	// current directory and use that file
+	files, err := filepath.Glob("*.jgrdb")
+	if err != nil {
+		return "", err
+	}
+	if len(files) == 1 {
+		return files[0], nil
+	}
+	return "", fmt.Errorf("Please specify a JSON GPG database file")
 }
 
 func initializeJSONGPGDB(jsonGPGDB *string) error {
