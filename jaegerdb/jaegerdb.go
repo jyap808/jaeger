@@ -42,14 +42,14 @@ func main() {
 	// Define flags
 	// TODO: View individual property and unencrypted value. 'get'
 	var (
-		addKey       = flag.String("a", "", "Add property")
-		changeKey    = flag.String("c", "", "Change property")
-		debugFlag    = flag.Bool("d", false, "Enable Debug")
-		deleteKey    = flag.String("delete", "", "Delete property")
-		inializeFlag = flag.Bool("init", false, "Create an initial blank JSON GPG database file")
-		jsonGPGDB    = flag.String("j", "", "JSON GPG database file. eg. file.txt.jgrdb")
-		keyringFile  = flag.String("k", "", "Keyring file. Public key in ASCII armored format. eg. pubring.asc")
-		value        = flag.String("v", "", "Value for property to use")
+		addKey         = flag.String("a", "", "Add property")
+		changeKey      = flag.String("c", "", "Change property")
+		debugFlag      = flag.Bool("d", false, "Enable Debug")
+		deleteKey      = flag.String("delete", "", "Delete property")
+		initializeFlag = flag.Bool("init", false, "Create an initial blank JSON GPG database file")
+		jsonGPGDB      = flag.String("j", "", "JSON GPG database file. eg. file.txt.jgrdb")
+		keyringFile    = flag.String("k", "", "Keyring file. Public key in ASCII armored format. eg. pubring.asc")
+		value          = flag.String("v", "", "Value for property to use")
 	)
 
 	flag.Usage = func() {
@@ -70,7 +70,7 @@ func main() {
 		return
 	}
 
-	if *inializeFlag {
+	if *initializeFlag {
 		err := initializeJSONGPGDB(jsonGPGDB)
 		if err != nil {
 			log.Fatal(err)
