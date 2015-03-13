@@ -78,7 +78,9 @@ func parseLine(line string) {
 	s := regexp.MustCompile("=").Split(line, 2)
 	key := camelKey(strings.TrimSpace(s[0]))
 	value := strings.TrimSpace(s[1])
-	fmt.Printf("jaegerdb -a %s -v '%s'\n", key, value)
+	if value != "" {
+		fmt.Printf("jaegerdb -a %s -v '%s'\n", key, value)
+	}
 }
 
 func camelKey(src string) string {
