@@ -70,7 +70,6 @@ func main() {
 		if err != nil {
 			flag.Usage()
 			log.Fatalf("\n\nError: %s", err)
-			return
 		}
 		*jsonGPGDB = assumedJaegerDB
 	}
