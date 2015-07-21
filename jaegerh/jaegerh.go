@@ -105,7 +105,7 @@ func parseLine(line string) {
 	key := camelKey(rawKey)
 	value := strings.TrimSpace(s[1])
 	if value != "" {
-		fmt.Printf("jaegerdb -a %s -v '%s' # %s = {{{.%s}}}\n", key, value, rawKey, key)
+		fmt.Printf("jaegerdb -a %s -v '%s' # %s = {{.%s}}\n", key, value, rawKey, key)
 	}
 }
 
