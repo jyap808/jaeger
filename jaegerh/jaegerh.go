@@ -101,10 +101,11 @@ func processInputFile(inputFile *string) {
 
 func parseLine(line string) {
 	s := regexp.MustCompile("=").Split(line, 2)
-	key := camelKey(strings.TrimSpace(s[0]))
+	rawKey := strings.TrimSpace(s[0])
+	key := camelKey(rawKey)
 	value := strings.TrimSpace(s[1])
 	if value != "" {
-		fmt.Printf("jaegerdb -a %s -v '%s'\n", key, value)
+		fmt.Printf("jaegerdb -a %s -v '%s' # %s = {{{.%s}}}\n", key, value, rawKey, key)
 	}
 }
 
