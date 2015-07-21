@@ -63,9 +63,17 @@ func processInputFile(inputFile *string) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		matched, _ := regexp.MatchString(".*=.*", scanner.Text())
+		parseString := scanner.Text()
+		matched, _ := regexp.MatchString("^[[:space:]]*#", parseString)
 		if matched {
-			parseLine(scanner.Text())
+			if debug {
+				fmt.Println("Ignoring: %s", parseString)
+			}
+			continue
+		}
+		matched, _ = regexp.MatchString(".*=.*", parseString)
+		if matched {
+			parseLine(parseString)
 		}
 	}
 
