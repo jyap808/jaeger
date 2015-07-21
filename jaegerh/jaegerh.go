@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -47,11 +48,27 @@ func main() {
 	}
 
 	if *inputTemplate == "" {
-		flag.Usage()
-		log.Fatalf("\n\nError: No input template file specified")
+		assumedTemplate, err := checkExistsJaegerT()
+		if err != nil {
+			flag.Usage()
+			log.Fatalf("\n\nError: %s", err)
+		}
+		*inputTemplate = assumedTemplate
 	}
 
 	processInputFile(inputTemplate)
+}
+
+func checkExistsJaegerT() (string, error) {
+	// Check that one template file is in the current directory and use that file
+	files, err := filepath.Glob("*.jgrt")
+	if err != nil {
+		return "", err
+	}
+	if len(files) == 1 {
+		return files[0], nil
+	}
+	return "", fmt.Errorf("No input template file specified")
 }
 
 func processInputFile(inputFile *string) {
