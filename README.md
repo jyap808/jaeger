@@ -15,7 +15,7 @@ A basic set of files consists of the following.
 
 The best way to experience Jaeger is to run through the Quickstart below.
 
-Jaeger uses the Go standard library except for the `code.google.com/p/go.crypto/openpgp` package.
+Jaeger uses the Go standard library except for the `golang.org/x/crypto/openpgp` package.
 
 > Stacker Pentecost: Haven't you heard Mr. Beckett? The world is coming to an end. So where would you rather die? Here? Or in a Jaeger!
 >
