@@ -164,7 +164,6 @@ func checkExistsJaegerDB() (string, error) {
 	assumedTemplate, err := checkExistsJaegerT()
 
 	if assumedTemplate != "" {
-		fmt.Println("assumedTemplate:", assumedTemplate)
 		basefilename := strings.TrimSuffix(assumedTemplate, jaegerTemplateExtension)
 		jsonGPGDB := fmt.Sprintf("%v%v", basefilename, jaegerDBExtension)
 		return jsonGPGDB, nil
