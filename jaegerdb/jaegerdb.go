@@ -2,19 +2,21 @@ package main
 
 import (
 	"bytes"
-	"golang.org/x/crypto/openpgp"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"golang.org/x/crypto/openpgp"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 )
 
-const jaegerJSONGPGDBExtension = ".jgrdb"
+const jaegerTemplateExtension = ".jgrt"
+const jaegerDBExtension = ".jgrdb"
 const jaegerDBDescription = "JaegerDB - Jaeger database management program\n\nJaeger is a JSON encoded GPG encrypted key value store. It is useful for separating development with operations and keeping configuration files secure."
 const jaegerQuote = "\"Stacker Pentecost: Haven't you heard Mr. Beckett? The world is coming to an end. So where would you rather die? Here? Or in a Jaeger!\" - Pacific Rim"
 const jaegerDBRecommendedUsage = "RECOMMENDED:\n    jaegerdb -j file.txt.jgrdb -a \"Field1\" -v \"Secret value\"\n\nThis will run JaegerDB with the default options and assume the following:\n    Keyring file: ~/.gnupg/jaeger_pubring.gpg"
@@ -136,6 +138,18 @@ func main() {
 
 }
 
+func checkExistsJaegerT() (string, error) {
+	// Check that one template file is in the current directory and use that file
+	files, err := filepath.Glob("*.jgrt")
+	if err != nil {
+		return "", err
+	}
+	if len(files) == 1 {
+		return files[0], nil
+	}
+	return "", fmt.Errorf("No input template file specified")
+}
+
 func checkExistsJaegerDB() (string, error) {
 	// If no JSON GPG database file is explicitly specified, check that one JSON GPG database file is in the
 	// current directory and use that file
@@ -146,6 +160,16 @@ func checkExistsJaegerDB() (string, error) {
 	if len(files) == 1 {
 		return files[0], nil
 	}
+
+	assumedTemplate, err := checkExistsJaegerT()
+
+	if assumedTemplate != "" {
+		fmt.Println("assumedTemplate:", assumedTemplate)
+		basefilename := strings.TrimSuffix(assumedTemplate, jaegerTemplateExtension)
+		jsonGPGDB := fmt.Sprintf("%v%v", basefilename, jaegerDBExtension)
+		return jsonGPGDB, nil
+	}
+
 	return "", fmt.Errorf("Please specify a JSON GPG database file")
 }
 
