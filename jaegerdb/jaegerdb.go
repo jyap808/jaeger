@@ -207,11 +207,7 @@ func encodeBase64EncryptedMessage(s string, entitylist openpgp.EntityList) strin
 	}
 
 	_, err = w.Write([]byte(s))
-	if err != nil {
-	}
 	err = w.Close()
-	if err != nil {
-	}
 
 	// Output as base64 encoded string
 	bytes, err := ioutil.ReadAll(buf)
@@ -290,7 +286,7 @@ func addKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist op
 	p := Property{Name: *key, EncryptedValue: encodeBase64EncryptedMessage(*value, entitylist)}
 
 	// Search
-	for i, _ := range j.Properties {
+	for i := range j.Properties {
 		property := &j.Properties[i]
 		debug.Printf("i: %v, Name: %#v, EncryptedValue: %#v\n", i, property.Name, property.EncryptedValue)
 		if property.Name == *key {
@@ -345,7 +341,7 @@ func changeKeyJaegerDB(key *string, value *string, jsonGPGDB *string, entitylist
 	p := Property{Name: *key, EncryptedValue: encodeBase64EncryptedMessage(*value, entitylist)}
 
 	// Search and replace
-	for i, _ := range j.Properties {
+	for i := range j.Properties {
 		property := &j.Properties[i]
 		debug.Printf("i: %v, Name: %#v, EncryptedValue: %#v\n", i, property.Name, property.EncryptedValue)
 		if property.Name == *key {
@@ -393,7 +389,7 @@ func deleteKeyJaegerDB(key *string, jsonGPGDB *string) error {
 	var newP []Property
 	found := false
 
-	for i, _ := range j.Properties {
+	for i := range j.Properties {
 		property := &j.Properties[i]
 		debug.Printf("i: %v, Name: %#v, EncryptedValue: %#v\n", i, property.Name, property.EncryptedValue)
 		if property.Name == *key {
